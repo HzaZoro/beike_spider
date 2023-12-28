@@ -5,35 +5,48 @@ import pandas as pd
 def run():
 
     url_base = 'https://bj.ke.com/ershoufang/'  # 基本链接
-    url_place = 'haidian'  # 查询地点
+    # url_place = 'haidian'  # 查询地点
     url_para = 'sf1y3l1l2l3/'  # 参数配置
     # 查询参数对应的内容：
     # sf1:普通住宅
     # y1:5年以内,  y2:10年以内,   y3:15年以内,   y4:20年以内
     # l1:1室,     l2:2室,       l3:3室
     # lc1:低楼层,  lc2:中楼层,   lc3:高楼层
-    total_page = find_total_page_count(url_base+url_place)
-    for current in range(1,total_page + 1):
-        url = url_base + url_place + '/pg' + str(current) + '/' + url_para
-        response_data = requests.get(url=url,headers=headers).text
-        bs = BeautifulSoup(response_data,'lxml')
-        div_info_list = bs.find_all('div',class_='info clear')
-        for div_info in div_info_list:
-            house_detail_url = div_info.find('div', class_="title").a.get('href')
-            area_detail_url = div_info.find('div',class_='positionInfo').a.get('href')
-            # print('房源地址：',house_detail_url)
-            # print('小区地址：',area_detail_url)
-            area_id_list = area_detail_url.split('/')
-            if area_id_list[len(area_id_list) - 1] == '':
-                area_id = area_id_list[len(area_id_list) - 2]
-            else:
-                area_id = area_id_list[len(area_id_list) - 1]
-            if area_id not in area_id_set:
-                area_id_set.add(area_id)
-                slove_area(area_detail_url)
 
-            slove_house(house_detail_url)
+    city_key = city_dict.keys()
+    for city_k in city_key:
+        city_url_key = city_dict.get(city_k).keys()
+        for url_place_key in city_url_key:
+            url_place = city_dict.get(city_k).get(url_place_key)
+            if url_place in sub_city_set:
+                print("已处理过【" + url_place_key + "】数据，跳过该次处理")
+                continue
+            total_page = find_total_page_count(url_base + url_place + '/' + url_para)
+            print("正在处理【", url_place_key, "】信息，共有[", total_page, "]页数据")
+            sub_city_set.add(url_place)
+            if total_page == 0:
+                print("【" + url_place_key + "】未发现数据，跳过该次处理")
+                continue
+            for current in range(1, total_page + 1):
+                url = url_base + url_place + '/pg' + str(current) + '/' + url_para
+                response_data = requests.get(url=url, headers=headers).text
+                bs = BeautifulSoup(response_data, 'lxml')
+                div_info_list = bs.find_all('div', class_='info clear')
+                for div_info in div_info_list:
+                    house_detail_url = div_info.find('div', class_="title").a.get('href')
+                    area_detail_url = div_info.find('div', class_='positionInfo').a.get('href')
+                    # print('房源地址：',house_detail_url)
+                    # print('小区地址：',area_detail_url)
+                    area_id_list = area_detail_url.split('/')
+                    if area_id_list[len(area_id_list) - 1] == '':
+                        area_id = area_id_list[len(area_id_list) - 2]
+                    else:
+                        area_id = area_id_list[len(area_id_list) - 1]
+                    if area_id not in area_id_set:
+                        area_id_set.add(area_id)
+                        slove_area(area_detail_url)
 
+                    slove_house(house_detail_url)
 
 
 def slove_house(house_detail_url):
@@ -207,9 +220,11 @@ def slove_area(area_detail_url):
 
 
 def find_total_page_count(url):
+    total_page = 0
     response = requests.get(url=url, headers=headers)
     bs = BeautifulSoup(response.text, 'lxml')
-    total_page = json.loads(bs.find(name="div", class_="page-box house-lst-page-box").get('page-data'))['totalPage']
+    if bs.find(name="div", class_="page-box house-lst-page-box") is not None :
+        total_page = json.loads(bs.find(name="div", class_="page-box house-lst-page-box").get('page-data'))['totalPage']
     return total_page
 
 if __name__ == '__main__':
@@ -224,7 +239,371 @@ if __name__ == '__main__':
                       'Safari/537.36',
     }
 
+    city_dict = {
+        'haidian' : {
+            # '安宁庄':'anningzhuang1',
+            # '奥林匹克公园':'aolinpikegongyuan11',
+            # '白石桥':'baishiqiao1',
+            # '北太平庄':'beitaipingzhuang',
+            # '厂洼':'changwa',
+            # '定慧寺':'dinghuisi',
+            # '二里庄':'erlizhuang',
+            # '甘家口':'ganjiakou',
+            # '公主坟':'gongzhufen',
+            # '海淀北部新区':'haidianbeibuxinqu1',
+            # '海淀其它':'haidianqita1',
+            # '军博':'junbo1',
+            # '六里桥':'liuliqiao1',
+            # '马甸':'madian1',
+            # '马连洼':'malianwa',
+            # '牡丹园':'mudanyuan',
+            # '清河':'qinghe11',
+            # '上地':'shangdi1',
+            # '世纪城':'shijicheng',
+            # '双榆树':'shuangyushu',
+            # '四季青':'sijiqing',
+            # '苏州桥':'suzhouqiao',
+            # '田村':'tiancun1',
+            # '万柳':'wanliu',
+            # '万寿路':'wanshoulu1',
+            # '魏公村':'weigongcun',
+            # '五道口':'wudaokou',
+            # '五棵松':'wukesong1',
+            # '小西天':'xiaoxitian1',
+            # '西北旺':'xibeiwang',
+            # '西二旗':'xierqi1',
+            # '新街口':'xinjiekou2',
+            # '西三旗':'xisanqi1',
+            # '西山':'xishan21',
+            # '西直门':'xizhimen1',
+            # '学院路':'xueyuanlu1',
+            # '颐和园':'yiheyuan',
+            # '圆明园':'yuanmingyuan',
+            # '玉泉路':'yuquanlu11',
+            # '皂君庙':'zaojunmiao',
+            # '知春路':'zhichunlu',
+            # '中关村':'zhongguancun',
+            '紫竹桥':'zizhuqiao'
+        },
+        'chaoyang':{
+            # '安定门': 'andingmen',
+            # '安贞': 'anzhen1',
+            # '奥林匹克公园': 'aolinpikegongyuan11',
+            # '百子湾': 'baiziwan',
+            # '北工大': 'beigongda',
+            # '北苑': 'beiyuan2',
+            # 'CBD': 'cbd',
+            # '常营': 'changying',
+            # '朝青': 'chaoqing',
+            # '朝阳公园': 'chaoyanggongyuan',
+            # '朝阳门内': 'chaoyangmennei1',
+            # '朝阳门外': 'chaoyangmenwai1',
+            # '成寿寺': 'chengshousi1',
+            # '大山子': 'dashanzi',
+            # '大望路': 'dawanglu',
+            # '定福庄': 'dingfuzhuang',
+            # '东坝': 'dongba',
+            # '东大桥': 'dongdaqiao',
+            # '东直门': 'dongzhimen',
+            # '豆各庄': 'dougezhuang',
+            # '方庄': 'fangzhuang1',
+            # '垡头': 'fatou',
+            # '甘露园': 'ganluyuan',
+            # '高碑店': 'gaobeidian',
+            # '工体': 'gongti',
+            # '广渠门': 'guangqumen',
+            # '管庄': 'guanzhuang',
+            # '国展': 'guozhan1',
+            # '和平里': 'hepingli',
+            # '红庙': 'hongmiao',
+            # '欢乐谷': 'huanlegu',
+            # '华威桥': 'huaweiqiao',
+            # '惠新西街': 'huixinxijie',
+            # '建国门外': 'jianguomenwai',
+            # '健翔桥': 'jianxiangqiao1',
+            # '劲松': 'jinsong',
+            # '酒仙桥': 'jiuxianqiao',
+            # '亮马桥': 'liangmaqiao',
+            # '立水桥': 'lishuiqiao1',
+            # '马甸': 'madian1',
+            # '牡丹园': 'mudanyuan',
+            # '南沙滩': 'nanshatan1',
+            # '农展馆': 'nongzhanguan',
+            # '潘家园': 'panjiayuan1',
+            # '三里屯': 'sanlitun',
+            # '三元桥': 'sanyuanqiao',
+            # '芍药居': 'shaoyaoju',
+            # '十八里店': 'shibalidian1',
+            # '石佛营': 'shifoying',
+            # '十里堡': 'shilibao',
+            # '十里河': 'shilihe',
+            # '首都机场': 'shoudoujichang1',
+            # '双井': 'shuangjing',
+            # '双桥': 'shuangqiao',
+            # '四惠': 'sihui',
+            # '宋家庄': 'songjiazhuang',
+            # '太阳宫': 'taiyanggong',
+            # '甜水园': 'tianshuiyuan',
+            # '通州北苑': 'tongzhoubeiyuan',
+            # '团结湖': 'tuanjiehu',
+            # '望京': 'wangjing',
+            # '小红门': 'xiaohongmen',
+            # '西坝河': 'xibahe',
+            # '燕莎': 'yansha1',
+            # '亚运村': 'yayuncun',
+            # '亚运村小营': 'yayuncunxiaoying',
+            # '朝阳其它': 'zhaoyangqita',
+            '中央别墅区': 'zhongyangbieshuqu1'
+        },
+        'dongcheng':{
+            # '安定门': 'andingmen',
+            # '安贞': 'anzhen1',
+            # '朝阳门内': 'chaoyangmennei1',
+            # '朝阳门外': 'chaoyangmenwai1',
+            # '崇文门': 'chongwenmen',
+            # '灯市口': 'dengshikou',
+            # '地安门': 'dianmen',
+            # '东单': 'dongdan',
+            # '东花市': 'donghuashi',
+            # '东四': 'dongsi1',
+            # '东直门': 'dongzhimen',
+            # '工体': 'gongti',
+            # '广渠门': 'guangqumen',
+            # '和平里': 'hepingli',
+            # '建国门内': 'jianguomennei',
+            # '建国门外': 'jianguomenwai',
+            # '交道口': 'jiaodaokou',
+            # '金宝街': 'jinbaojie',
+            # '六铺炕': 'liupukang',
+            # '蒲黄榆': 'puhuangyu',
+            # '前门': 'qianmen',
+            # '陶然亭': 'taoranting1',
+            # '天坛': 'tiantan',
+            # '西单': 'xidan',
+            # '西罗园': 'xiluoyuan',
+            # '洋桥': 'yangqiao1',
+            # '永定门': 'yongdingmen',
+            '左安门': 'zuoanmen1'
+        },
+        'xicheng':{
+            # '白纸坊': 'baizhifang1',
+            # '菜户营': 'caihuying',
+            # '长椿街': 'changchunjie',
+            # '车公庄': 'chegongzhuang1',
+            # '德胜门': 'deshengmen',
+            # '地安门': 'dianmen',
+            # '阜成门': 'fuchengmen',
+            # '广安门': 'guanganmen',
+            # '官园': 'guanyuan',
+            # '金融街': 'jinrongjie',
+            # '六铺炕': 'liupukang',
+            # '马甸': 'madian1',
+            # '马连道': 'maliandao1',
+            # '木樨地': 'muxidi1',
+            # '牛街': 'niujie',
+            # '太平桥': 'taipingqiao1',
+            # '陶然亭': 'taoranting1',
+            # '天宁寺': 'tianningsi1',
+            # '小西天': 'xiaoxitian1',
+            # '西单': 'xidan',
+            # '新街口': 'xinjiekou2',
+            # '西四': 'xisi1',
+            # '西直门': 'xizhimen1',
+            # '宣武门': 'xuanwumen12',
+            # '右安门内': 'youanmennei11',
+            '月坛': 'yuetan'
+        },
+        'fengtai':{
+            # '北大地': 'beidadi',
+            # '北京南站': 'beijingnanzhan1',
+            # '菜户营': 'caihuying',
+            # '草桥': 'caoqiao',
+            # '成寿寺': 'chengshousi1',
+            # '大红门': 'dahongmen',
+            # '房山其它': 'fangshanqita',
+            # '方庄': 'fangzhuang1',
+            # '丰台其它': 'fengtaiqita1',
+            # '广安门': 'guanganmen',
+            # '和义': 'heyi',
+            # '花乡': 'huaxiang',
+            # '角门': 'jiaomen',
+            # '旧宫': 'jiugong1',
+            # '看丹桥': 'kandanqiao',
+            # '科技园区': 'kejiyuanqu',
+            # '刘家窑': 'liujiayao',
+            # '六里桥': 'liuliqiao1',
+            # '丽泽': 'lize',
+            # '卢沟桥': 'lugouqiao1',
+            # '马家堡': 'majiabao',
+            # '马连道': 'maliandao1',
+            # '木樨园': 'muxiyuan1',
+            # '蒲黄榆': 'puhuangyu',
+            # '七里庄': 'qilizhuang',
+            # '青塔': 'qingta1',
+            # '十里河': 'shilihe',
+            # '宋家庄': 'songjiazhuang',
+            # '太平桥': 'taipingqiao1',
+            # '陶然亭': 'taoranting1',
+            # '万源': 'wanyuan1',
+            # '五棵松': 'wukesong1',
+            # '五里店': 'wulidian',
+            # '西红门': 'xihongmen',
+            # '西罗园': 'xiluoyuan',
+            # '新宫': 'xingong',
+            # '洋桥': 'yangqiao1',
+            # '永定门': 'yongdingmen',
+            # '右安门外': 'youanmenwai',
+            # '岳各庄': 'yuegezhuang',
+            # '玉泉营': 'yuquanying',
+            '赵公口': 'zhaogongkou'
+        },
+        'shijingshan':{
+            # '八角': 'bajiao1',
+            # '城子': 'chengzi',
+            # '古城': 'gucheng',
+            # '老山': 'laoshan1',
+            # '鲁谷': 'lugu1',
+            # '苹果园': 'pingguoyuan1',
+            # '石景山其它': 'shijingshanqita1',
+            # '杨庄': 'yangzhuang1',
+            '玉泉路': 'yuquanlu11'
+        },
+        'daxing':{
+            # '大兴机场空港': 'daxingjichangkonggang',
+            # '大兴其它': 'daxingqita11',
+            # '大兴新机场': 'daxingxinjichang',
+            # '大兴新机场洋房别墅区': 'daxingxinjichangyangfangbieshuqu',
+            # '高米店': 'gaomidian',
+            # '观音寺': 'guanyinsi',
+            # '和义': 'heyi',
+            # '黄村火车站': 'huangcunhuochezhan',
+            # '黄村中': 'huangcunzhong',
+            # '旧宫': 'jiugong1',
+            # '科技园区': 'kejiyuanqu',
+            # '马驹桥': 'majuqiao1',
+            # '南中轴机场商务区': 'nanzhongzhoujichangshangwuqu',
+            # '天宫院': 'tiangongyuan',
+            # '天宫院南': 'tiangongyuannan',
+            # '通州其它': 'tongzhouqita11',
+            # '万源': 'wanyuan1',
+            # '西红门': 'xihongmen',
+            # '新宫': 'xingong',
+            # '义和庄': 'yihezhuang',
+            # '亦庄': 'yizhuang1',
+            # '亦庄开发区其它': 'yizhuangkaifaquqita1',
+            # '枣园': 'zaoyuan',
+            '瀛海': 'yinghai'
+        },
+        'shunyi':{
+            # '后沙峪': 'houshayu1',
+            # '李桥': 'liqiao1',
+            # '马坡': 'mapo',
+            # '首都机场': 'shoudoujichang1',
+            # '顺义城': 'shunyicheng',
+            # '顺义其它': 'shunyiqita1',
+            # '天竺': 'tianzhu1',
+            '杨镇': 'yangzhen',
+            '中央别墅区': 'zhongyangbieshuqu1'
+        },
+        'changping':{
+            # '奥林匹克公园': 'aolinpikegongyuan11',
+            # '百善镇': 'baishanzhen',
+            # '北七家': 'beiqijia',
+            # '昌平其它': 'changpingqita1',
+            # '东关': 'dongguan',
+            # '鼓楼大街': 'guloudajie',
+            # '海淀北部新区': 'haidianbeibuxinqu1',
+            # '怀柔其它': 'huairouqita1',
+            # '回龙观': 'huilongguan2',
+            # '霍营': 'huoying',
+            # '立水桥': 'lishuiqiao1',
+            # '南口': 'nankou',
+            # '南邵': 'nanshao',
+            # '沙河': 'shahe2',
+            # '天通苑': 'tiantongyuan1',
+            # '小汤山': 'xiaotangshan1',
+            # '西关环岛': 'xiguanhuandao',
+            '西三旗': 'xisanqi1'
+        },
+        'mentougou':{
+            # '滨河西区': 'binhexiqu1',
+            # '城子': 'chengzi',
+            # '大峪': 'dayu',
+            # '冯村': 'fengcun',
+            # '门头沟其它': 'mentougouqita1',
+            # '上岸地铁': 'shanganditie',
+            '石门营': 'shimenying'
+        },
+        'fangshan':{
+            # '长阳': 'changyang1',
+            # '城关': 'chengguan',
+            # '大兴其它': 'daxingqita11',
+            # '窦店': 'doudian',
+            # '房山其它': 'fangshanqita',
+            # '丰台其它': 'fengtaiqita1',
+            # '韩村河': 'hancunhe1',
+            # '良乡': 'liangxiang',
+            # '琉璃河': 'liulihe',
+            # '阎村': 'yancun',
+            '燕山': 'yanshan'
+        },
+        'huairou':{
+            # '怀柔': 'huairouchengqu1',
+            '怀柔其它': 'huairouqita1'
+        },
+        'miyun':{
+            # '北庄镇': 'beizhuangzhen',
+            # '不老屯镇': 'bulaotunzhen',
+            # '大城子镇': 'daichengzizhen',
+            # '东邵渠镇': 'dongshaoquzhen',
+            # '冯家峪镇': 'fengjiayuzhen',
+            # '高岭镇': 'gaolingzhen',
+            # '古北口镇': 'gubeikouzhen',
+            # '鼓楼街道': 'guloujiedao',
+            # '果园街道': 'guoyuanjiedao',
+            # '河南寨镇': 'henanzhaizhen',
+            # '巨各庄镇': 'jugezhuangzhen',
+            # '密云其它': 'miyunqita11',
+            # '密云镇': 'miyunzhen',
+            # '穆家峪镇': 'mujiayuzhen',
+            # '石城镇': 'shichengzhen',
+            # '十里堡镇': 'shilipuzhen',
+            # '太师屯镇': 'taishitunzhen',
+            # '檀营': 'tanying',
+            # '新城子镇': 'xinchengzizhen',
+            # '西田各庄镇': 'xitiangezhuangzhen',
+            '溪翁庄镇': 'xiwengzhuangzhen'
+        },
+        'pinggu':{
+            '平谷其它': 'pingguqita1'
+        },
+        'yanqing':{
+            # '怀柔其它': 'huairouqita1',
+            '延庆其它': 'yanqingqita1'
+        },
+        'tongzhou':{
+            # '北关': 'beiguan',
+            # '大兴新机场洋房别墅区': 'daxingxinjichangyangfangbieshuqu',
+            # '果园': 'guoyuan1',
+            # '九棵树(家乐福)': 'jiukeshu12',
+            # '临河里': 'linheli',
+            # '梨园': 'liyuan',
+            # '潞苑': 'luyuan',
+            # '马驹桥': 'majuqiao1',
+            # '乔庄': 'qiaozhuang',
+            # '首都机场': 'shoudoujichang1',
+            # '通州北苑': 'tongzhoubeiyuan',
+            # '通州其它': 'tongzhouqita11',
+            # '万达': 'wanda14',
+            # '武夷花园': 'wuyihuayuan',
+            # '亦庄': 'yizhuang1',
+            '玉桥': 'yuqiao'
+        }
+
+    }
+
     area_id_set= set()
+    sub_city_set = set()
     house_data_list = []
     area_data_list = []
     run()
