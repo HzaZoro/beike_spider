@@ -6,7 +6,7 @@ import datetime as dt
 def run():
 
     url_base = 'https://bj.ke.com/ershoufang/'  # 基本链接
-    url_para = 'sf1y4l1l2l3/'  # 参数配置
+    url_para = 'sf1y3l1l2l3/'  # 参数配置
     # 查询参数对应的内容：
     # sf1:普通住宅
     # y1:5年以内,  y2:10年以内,   y3:15年以内,   y4:20年以内
@@ -17,23 +17,26 @@ def run():
     city_key = city_dict.keys()
     for city_k in city_key:
         city_url_key = city_dict.get(city_k).keys()
-        thread_count = int(len(city_url_key) / 4 + 1)
-        print('【'+city_k+'】创建 ['+str(thread_count)+'] 个线程处理数据' )
-        for thread_c in range(thread_count):
-            t = threading.Thread(target=threadRun,name=(city_k + str(thread_c)),args=(city_k,city_url_key,url_base,url_para))
-            thread_list.append(t)
-            t.start()
+        print('【'+city_k+'】创建线程处理数据')
+        t = threading.Thread(target=threadRun,name=( str(city_k)),args=(city_k,city_url_key,url_base,url_para))
+        thread_list.append(t)
+        t.start()
 
-    t_flag = False
-    while(not t_flag):
+    t_flag = True
+    while(t_flag):
+        print("==============检查线程状态===============>")
+        c_flag = False
         for t in thread_list:
-            if (not t.is_alive()):
-                print("线程【"+t.name+"】已处理完成")
-                t_flag = True
-                continue
+            if (t.is_alive()):
+                print("线程【" + t.name + "】还未处理完成")
+                c_flag = True
+
+        if not c_flag:
             t_flag = False
-            print("线程【" + t.name + "】还未处理完成")
+            print("线程【" + t.name + "】已处理完成")
+
         time.sleep(5)
+
     print("所有线程数据处理完成")
 
 
@@ -51,25 +54,27 @@ def threadRun(city_k,city_url_key,url_base,url_para):
             print("【" + url_place_key + "】未发现数据，跳过该次处理")
             continue
         for current in range(1, total_page + 1):
-            url = url_base + url_place + '/pg' + str(current) + '/' + url_para
+            url = url_base + url_place + '/pg' + str(current) + url_para
+            print("正在处理【", url_place_key, "】信息，[",current,"/", total_page, "]页数据")
             response_data = requests.get(url=url, headers=headers).text
             bs = BeautifulSoup(response_data, 'lxml')
             div_info_list = bs.find_all('div', class_='info clear')
             for div_info in div_info_list:
                 house_detail_url = div_info.find('div', class_="title").a.get('href')
                 area_detail_url = div_info.find('div', class_='positionInfo').a.get('href')
-                # print('房源地址：',house_detail_url)
-                # print('小区地址：',area_detail_url)
                 area_id_list = area_detail_url.split('/')
                 if area_id_list[len(area_id_list) - 1] == '':
                     area_id = area_id_list[len(area_id_list) - 2]
                 else:
                     area_id = area_id_list[len(area_id_list) - 1]
                 if area_id not in area_id_set:
+                    lock = threading.Lock()
+                    lock.acquire()
                     area_id_set.add(area_id)
+                    lock.release()
                     slove_area(area_detail_url)
-
                 slove_house(house_detail_url)
+        print("处理【", url_place_key, "】信息已完成")
 
 def slove_house(house_detail_url):
     house_data = requests.get(url=house_detail_url, headers=headers).content.decode('utf-8')
@@ -165,8 +170,10 @@ def slove_house(house_detail_url):
         elif '抵押信息' in house_d:
             house_dict['抵押信息'] = house_d.split('抵押信息')[1]
             continue
+    lock = threading.Lock()
+    lock.acquire()
     house_data_list.append(house_dict)
-
+    lock.release()
 
 def slove_area(area_detail_url):
     area_data = requests.get(url=area_detail_url, headers=headers).content.decode('utf-8')
@@ -237,9 +244,10 @@ def slove_area(area_detail_url):
         elif '开发商' in area_data_d:
             area_dict['开发商'] = area_data_d.split('开发商')[1]
             continue
-
+    lock = threading.Lock()
+    lock.acquire()
     area_data_list.append(area_dict)
-
+    lock.release()
 
 def find_total_page_count(url):
     total_page = 0
@@ -298,7 +306,7 @@ if __name__ == '__main__':
             # '西北旺':'xibeiwang',
             # '西二旗':'xierqi1',
             # '新街口':'xinjiekou2',
-            # '西三旗':'xisanqi1',
+            '西三旗':'xisanqi1',
             # '西山':'xishan21',
             # '西直门':'xizhimen1',
             # '学院路':'xueyuanlu1',
@@ -599,31 +607,31 @@ if __name__ == '__main__':
         #     # '西田各庄镇': 'xitiangezhuangzhen',
         #     '溪翁庄镇': 'xiwengzhuangzhen'
         # },
-        'pinggu':{
-            '平谷其它': 'pingguqita1'
-        },
-        'yanqing':{
-            # '怀柔其它': 'huairouqita1',
-            '延庆其它': 'yanqingqita1'
-        },
-        'tongzhou':{
-            # '北关': 'beiguan',
-            # '大兴新机场洋房别墅区': 'daxingxinjichangyangfangbieshuqu',
-            # '果园': 'guoyuan1',
-            # '九棵树(家乐福)': 'jiukeshu12',
-            # '临河里': 'linheli',
-            # '梨园': 'liyuan',
-            # '潞苑': 'luyuan',
-            # '马驹桥': 'majuqiao1',
-            # '乔庄': 'qiaozhuang',
-            # '首都机场': 'shoudoujichang1',
-            # '通州北苑': 'tongzhoubeiyuan',
-            # '通州其它': 'tongzhouqita11',
-            # '万达': 'wanda14',
-            # '武夷花园': 'wuyihuayuan',
-            # '亦庄': 'yizhuang1',
-            '玉桥': 'yuqiao'
-        }
+        # 'pinggu':{
+        #     '平谷其它': 'pingguqita1'
+        # },
+        # 'yanqing':{
+        #     # '怀柔其它': 'huairouqita1',
+        #     '延庆其它': 'yanqingqita1'
+        # },
+        # 'tongzhou':{
+        #     # '北关': 'beiguan',
+        #     # '大兴新机场洋房别墅区': 'daxingxinjichangyangfangbieshuqu',
+        #     # '果园': 'guoyuan1',
+        #     # '九棵树(家乐福)': 'jiukeshu12',
+        #     # '临河里': 'linheli',
+        #     # '梨园': 'liyuan',
+        #     # '潞苑': 'luyuan',
+        #     # '马驹桥': 'majuqiao1',
+        #     # '乔庄': 'qiaozhuang',
+        #     # '首都机场': 'shoudoujichang1',
+        #     # '通州北苑': 'tongzhoubeiyuan',
+        #     # '通州其它': 'tongzhouqita11',
+        #     # '万达': 'wanda14',
+        #     # '武夷花园': 'wuyihuayuan',
+        #     # '亦庄': 'yizhuang1',
+        #     '玉桥': 'yuqiao'
+        # }
 
     }
 
@@ -644,7 +652,7 @@ if __name__ == '__main__':
                  '供暖方式',
                  '挂牌时间', '交易权属', '上次交易', '房屋用途', '房屋年限', '产权所属', '抵押信息']
         df = df[order]
-        df.to_excel('./{}二手房源-{}.xlsx'.format('haidian', time.strftime('%Y-%m-%d', time.localtime())), index=False)
+        df.to_excel('./{}二手房源-{}.xlsx'.format('北京', time.strftime('%Y-%m-%d', time.localtime())), index=False)
 
     if len(area_data_list) != 0:
         df = pd.DataFrame.from_records(area_data_list)
@@ -653,7 +661,7 @@ if __name__ == '__main__':
                  '绿化率',
                  '容积率', '建成年代', '供暖类型', '用水类型', '用电类型', '物业费', '物业公司', '开发商']
         df = df[order]
-        df.to_excel('./{}二手房源-{}.xlsx'.format('haidian_area', time.strftime('%Y-%m-%d', time.localtime())), index=False)
+        df.to_excel('./{}二手房源-{}.xlsx'.format('北京小区', time.strftime('%Y-%m-%d', time.localtime())), index=False)
 
     end_date = dt.datetime.now()
     end_time = end_date.strftime('%F %T')
