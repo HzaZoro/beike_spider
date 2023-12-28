@@ -1,12 +1,12 @@
 from bs4 import BeautifulSoup
 import requests,json,time,threading
 import pandas as pd
+import datetime as dt
 
 def run():
 
     url_base = 'https://bj.ke.com/ershoufang/'  # 基本链接
-    # url_place = 'haidian'  # 查询地点
-    url_para = 'sf1y3l1l2l3/'  # 参数配置
+    url_para = 'sf1y4l1l2l3/'  # 参数配置
     # 查询参数对应的内容：
     # sf1:普通住宅
     # y1:5年以内,  y2:10年以内,   y3:15年以内,   y4:20年以内
@@ -250,6 +250,9 @@ def find_total_page_count(url):
     return total_page
 
 if __name__ == '__main__':
+    now_date = dt.datetime.now()
+    now_time = now_date.strftime('%F %T')
+    print('开始爬取相关数据，时间:【' + now_time + "】")
     # 请求头
     headers = {
         'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
@@ -651,3 +654,8 @@ if __name__ == '__main__':
                  '容积率', '建成年代', '供暖类型', '用水类型', '用电类型', '物业费', '物业公司', '开发商']
         df = df[order]
         df.to_excel('./{}二手房源-{}.xlsx'.format('haidian_area', time.strftime('%Y-%m-%d', time.localtime())), index=False)
+
+    end_date = dt.datetime.now()
+    end_time = end_date.strftime('%F %T')
+    sec = (end_date - now_date).seconds
+    print('爬取相关数据完成，时间:【' + end_time + '】,共计消耗：【' + str(sec)+'】秒')
